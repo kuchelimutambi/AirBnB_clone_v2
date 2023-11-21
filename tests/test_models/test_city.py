@@ -5,10 +5,14 @@
 '''
 
 import unittest
-import pep8
 from models.base_model import BaseModel
-from models.city import City
+from models.user import User
 from os import getenv, remove
+from io import StringIO
+import sys
+import datetime
+import pep8
+
 
 storage = getenv("HBNB_TYPE_STORAGE", "fs")
 
@@ -17,58 +21,77 @@ class TestUser(unittest.TestCase):
     '''
         Testing User class
     '''
-
     @classmethod
     def setUpClass(cls):
         '''
             Sets up unittest
         '''
-        cls.new_city = City()
-        cls.new_city.state_id = "California"
-        cls.new_city.name_id = "San Francisco"
+        cls.new_user = User()
+        cls.new_user.email = "email@gmail.com"
+        cls.new_user.password = "password"
+        cls.new_user.firt_name = "Mel"
+        cls.new_user.last_name = "Ng"
 
     @classmethod
     def tearDownClass(cls):
         '''
             Tears down unittest
         '''
-        del cls.new_city
+        del cls.new_user
         try:
             remove("file.json")
         except FileNotFoundError:
             pass
 
-    def test_City_dbtable(self):
+    def test_User_dbtable(self):
         '''
             Check if the tablename is correct
         '''
-        self.assertEqual(self.new_city.__tablename__, "cities")
+        self.assertEqual(self.new_user.__tablename__, "users")
 
-    def test_City_inheritance(self):
+    def test_User_inheritance(self):
         '''
-            Tests that the City class Inherits from BaseModel
+            tests that the User class Inherits from BaseModel
         '''
-        self.assertIsInstance(self.new_city, BaseModel)
+        self.assertIsInstance(self.new_user, BaseModel)
 
     def test_User_attributes(self):
         '''
-            Test user attributes exist
+            Test the user attributes exist
         '''
-        self.assertTrue("state_id" in self.new_city.__dir__())
-        self.assertTrue("name" in self.new_city.__dir__())
+        self.assertTrue("email" in self.new_user.__dir__())
+        self.assertTrue("first_name" in self.new_user.__dir__())
+        self.assertTrue("last_name" in self.new_user.__dir__())
+        self.assertTrue("password" in self.new_user.__dir__())
 
     @unittest.skipIf(storage == "db", "Testing database storage only")
-    def test_type_name(self):
+    def test_type_email(self):
         '''
             Test the type of name
         '''
-        name = getattr(self.new_city, "name")
+        name = getattr(self.new_user, "email")
         self.assertIsInstance(name, str)
 
     @unittest.skipIf(storage == "db", "Testing database storage only")
-    def test_type_name(self):
+    def test_type_first_name(self):
         '''
             Test the type of name
         '''
-        name = getattr(self.new_city, "state_id")
+        name = getattr(self.new_user, "first_name")
+        self.assertIsInstance(name, str)
+
+    @unittest.skipIf(storage == "db", "Testing database storage only")
+    def test_type_last_name(self):
+        '''
+            Test the type of last_name
+        '''
+        name = getattr(self.new_user, "last_name")
+        self.assertIsInstance(name, str)
+
+    @unittest.skipIf(storage == "db", "Testing database storage only")
+    def test_type_password(self):
+        '''
+            Test the type of password
+        '''
+        name = getattr(self.new_user, "password")
         self.assertIsInstance(name, str)
