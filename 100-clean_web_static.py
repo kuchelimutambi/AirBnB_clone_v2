@@ -1,69 +1,57 @@
 #!/usr/bin/python3
-"""
-Fabric script methods:
-    do_pack(): packs web_static/ files into .tgz archive
-    do_deploy(archive_path): deploys archive to webservers
-    deploy(): do_packs && do_deploys
-    do_clean(n=0): removes old versions and keeps n (or 1) newest versions only
-Usage:
-    fab -f 3-deploy_web_static.py do_clean:n=2 -i my_ssh_private_key -u ubuntu
-"""
-from fabric.api import local, env, put, run
-from time import strftime
-import os.path
-env.hosts = ['100.25.161.237', '54.197.21.169']
+from fabric.api import run, local, put, env
+import datetime
+import os
 
 
 def do_pack():
-    """generate .tgz archive of web_static/ folder"""
-    timenow = strftime("%Y%M%d%H%M%S")
+    now = datetime.datetime.now()
+    date = (str(now.year) + str(now.month) + str(now.day) + str(now.hour) +
+            str(now.minute) + str(now.second))
     try:
         local("mkdir -p versions")
-        filename = "versions/web_static_{}.tgz".format(timenow)
-        local("tar -cvzf {} web_static/".format(filename))
-        return filename
+        local("tar -cvzf versions/web_static_{}.tgz ./web_static".format(date))
+        return "./versions/web_static_{}.tgz".format(date)
     except:
         return None
 
 
+env.hosts = ['35.190.188.208', '35.227.47.184']
+
+
 def do_deploy(archive_path):
-    """
-    Deploy archive to web server
-    """
-    if os.path.isfile(archive_path) is False:
+    if os.path.exists(archive_path) is False:
         return False
     try:
-        filename = archive_path.split("/")[-1]
-        no_ext = filename.split(".")[0]
-        path_no_ext = "/data/web_static/releases/{}/".format(no_ext)
-        symlink = "/data/web_static/current"
-        put(archive_path, "/tmp/")
-        run("mkdir -p {}".format(path_no_ext))
-        run("tar -xzf /tmp/{} -C {}".format(filename, path_no_ext))
-        run("rm /tmp/{}".format(filename))
-        run("mv {}web_static/* {}".format(path_no_ext, path_no_ext))
-        run("rm -rf {}web_static".format(path_no_ext))
-        run("rm -rf {}".format(symlink))
-        run("ln -s {} {}".format(path_no_ext, symlink))
+        upload = put(archive_path, "/tmp/")
+        name = archive_path[11:-4]
+        rmt_path = "/data/web_static/releases/" + name
+        run("mkdir {}".format(rmt_path))
+        run("tar -xvzf /tmp/{}.tgz --directory {}/".format(name, rmt_path))
+        run("rm /tmp/{}.tgz".format(name))
+        run("rm /data/web_static/current")
+        run("ln -nsf /data/web_static/releases/{} /data/web_static/current"
+            .format(name))
+        run("mv {}/web_static/* {}".format(rmt_path, rmt_path))
+        run("rm -d {}/web_static/".format(rmt_path))
         return True
     except:
         return False
 
 
 def deploy():
-    archive_path = do_pack()
-    if archive_path is None:
+    path = do_pack()
+    print("este es el path: ", path)
+    if path is None:
         return False
-    success = do_deploy(archive_path)
-    return success
+    return do_deploy(path)
 
 
 def do_clean(number=0):
-    if number == 0:
-        number = 1
-    with cd.local('./versions'):
-            local("ls -lt | tail -n +{} | rev | cut -f1 -d" " | rev | \
-            xargs -d '\n' rm".format(1 + number))
-    with cd('/data/web_static/releases/'):
-            run("ls -lt | tail -n +{} | rev | cut -f1 -d" " | rev | \
-            xargs -d '\n' rm".format(1 + number))
+    num_files = local("ls -1t versions/ | wc -l", capture=True)
+    if number == "0":
+        number = "1"
+    dif = int(num_files) - int(number)
+    if dif > 0:
+        for i in range(0, dif):
+            local("rm  versions/$(ls -1t versions/ | tail -1)")
